@@ -1,59 +1,93 @@
-
-// PRODUCTS
-
-import { useEffect, useState } from "react";
-import {getProduct} from "../../Service/Service.service"
+import React, { useEffect, useState } from 'react';
+import axiosInstance from '../../Service/axiosInstance';
 import { useCart } from '../../Context/CartContext';
+import { useWishlist } from '../../Context/WishlistContext';
+import { Container, Card, Button } from 'react-bootstrap';
+import { Link } from 'react-router-dom';
+import SearchBar from '../Pages/SearchBar';
+import Filters from '../Pages/Filters';
+import Carousel from 'react-multi-carousel';
+import 'react-multi-carousel/lib/styles.css';
 
-function Products() {
-    const { addToCart } = useCart();
-    const [products, setProducts] = useState([]);
+const responsive = {
+  superLargeDesktop: { breakpoint: { max: 4000, min: 1024 }, items: 4 },
+  desktop: { breakpoint: { max: 1024, min: 768 }, items: 3 },
+  tablet: { breakpoint: { max: 768, min: 464 }, items: 2 },
+  mobile: { breakpoint: { max: 464, min: 0 }, items: 1 },
+};
 
-    useEffect(() => {
-        getProduct()
-            .then(res => setProducts(res.data))
-            .catch(err => console.log(err))
-    }, []);
+const Products = () => {
+  const { addToCart } = useCart();
+  const { addToWishlist } = useWishlist();
+  const [products, setProducts] = useState([]);
+  const [filters, setFilters] = useState({});
+  const [searchQuery, setSearchQuery] = useState('');
 
-    console.log(products);
+  useEffect(() => {
+    const query = Object.entries(filters).map(([key, value]) => `${key}=${value}`).join('&');
+    const searchParam = searchQuery ? `search=${searchQuery}&` : '';
+    axiosInstance.get(`/products?${searchParam}${query}`)
+      .then(res => setProducts(res.data))
+      .catch(err => console.log(err));
+  }, [filters, searchQuery]);
 
-    return ( 
-        <>
-             <header className="container text-light bg-dark rounded-2
-            py-4 text-center
-            w-50 mx-auto my-5">
-                <h2> All Products </h2>
-            </header>
-            
-            
-  <div className="container">
-    <div className="row row-cols-1 row-cols-md-3 row-cols-lg-4 g-3">
-      {products && products.map((product) => (
-        <div key={product.id} className="col">
-          <div className="card shadow-sm">
-            <img
-              src={product.image}
-              alt="Product"
-              className="card-img-top"
-              style={{ height: '200px', objectFit: 'cover' }}
-            />
-            <div className="card-body">
-              <h6 className="card-title">{product.title}</h6>
-              <p className="card-text">
-                {product.description.length > 52 ? `${product.description.slice(0, 52)}...` : product.description}
-              </p>
-              <h5 className="card-price">${product.price}</h5>
-              <button onClick={() => addToCart(product)}>Add to Cart</button>
+  return (
+    <Container>
+      <SearchBar onSearch={setSearchQuery} />
+      <Filters onFilter={setFilters} />
+      <Carousel
+        responsive={responsive}
+        infinite={true}
+        autoPlay={true}
+        autoPlaySpeed={3000}
+        keyBoardControl={true}
+        customTransition="all .5s"
+        transitionDuration={500}
+      >
+        {products.length > 0 ? (
+          products.map(product => (
+            <div key={product.id} className="p-2">
+              <Card className="h-100">
+                <Card.Img
+                  variant="top"
+                  src={product.image}
+                  alt={product.title}
+                  style={{ height: '200px', objectFit: 'cover' }}
+                />
+                <Card.Body>
+                  <Card.Title>{product.title}</Card.Title>
+                  <Card.Text>${product.price}</Card.Text>
+                  <Link to={`/product/${product.id}`} className="btn btn-outline-dark btn-light w-100 mb-2">
+                    View Details
+                  </Link>
+                  <div className="d-flex gap-2">
+                    <Button
+                      variant="outline-primary"
+                      onClick={() => addToCart(product)}
+                      className="w-50 btn btn-outline-dark btn-light btn-sm"
+                    >
+                      Add to Cart
+                    </Button>
+                    <Button
+                      variant="outline-primary"
+                      onClick={() => addToWishlist(product)}
+                      className="w-50 btn btn-outline-dark btn-light btn-sm"
+                    >
+                      Add to Wishlist
+                    </Button>
+                  </div>
+                </Card.Body>
+              </Card>
             </div>
+          ))
+        ) : (
+          <div className="text-center">
+            <h3>No products available</h3>
           </div>
-        </div>
-      ))}
-    </div>
-  </div>
-
-
-        </>
-     );
-}
+        )}
+      </Carousel>
+    </Container>
+  );
+};
 
 export default Products;
